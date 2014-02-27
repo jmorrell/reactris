@@ -1,0 +1,21 @@
+{
+  "name": "reactris",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "./node_modules/browserify/bin/cmd.js -t reactify index.js > bundle.js"
+  },
+  "author": "Jeremy Morrell <morrell.jeremy@gmail.com> (http://rathercurio.us/)",
+  "license": "MIT",
+  "devDependencies": {
+    "browserify": "~3.30.2",
+    "reactify": "~0.8.1"
+  },
+  "dependencies": {
+    "envify": "~1.2.1",
+    "react": "~0.9.0",
+    "mousetrap": "0.0.1"
+  }
+}
