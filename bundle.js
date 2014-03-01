@@ -51,6 +51,8 @@ var Tetris = React.createClass({
   },
 
   _handleKey: function(event) {
+    event.preventDefault();
+
     var actionMap = {
       'ArrowUp': tetris.rotate,
       'ArrowDown': tetris.moveDown,
