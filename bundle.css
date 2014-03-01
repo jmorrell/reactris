@@ -3,6 +3,10 @@
   box-sizing: border-box;   
 }
 
+.board {
+  outline: none;
+}
+
 .board-row {
   height: 40px;
 }

@@ -1,21 +1,14 @@
-var React = require('react/addons');
+var React = require('react');
 var tetris = require('./tetris');
 var div = React.DOM.div;
 
+var COLORS = ['black', 'red', 'blue', 'green', 'purple', 'yellow'];
+
 var CanvasSquare = React.createClass({
   render: function() {
-    var classes = React.addons.classSet({
-      'square': true,
-      'active': this.props.data > 0,
-      'black': this.props.data === 0,
-      'red': this.props.data === 1,
-      'blue': this.props.data === 2,
-      'green': this.props.data === 3,
-      'purple': this.props.data === 4,
-      'yellow': this.props.data === 5
-    });
-
-    return div({ className: classes });
+    var className = 'square ' + [COLORS[this.props.data]];
+    className += this.props.data > 0 ? ' active' : '';
+    return div({ className: className });
   }
 });
 
