@@ -16922,7 +16922,7 @@ module.exports = function(height, width) {
     nextColor: 1,
     x: 0,
     y: 0,
-    speed: 600,
+    speed: 500,
     figure: undefined
   };
 
