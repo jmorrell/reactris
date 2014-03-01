@@ -1,7 +1,6 @@
-/** @jsx React.DOM */
 var React = require('react/addons');
 var tetris = require('./tetris');
-var mousetrap = require('mousetrap');
+var div = React.DOM.div;
 
 var CanvasSquare = React.createClass({
   render: function() {
@@ -16,23 +15,17 @@ var CanvasSquare = React.createClass({
       'yellow': this.props.data === 5
     });
 
-    return (
-      <div className={classes} />
-    );
+    return div({ className: classes });
   }
 });
 
 var CanvasRow = React.createClass({
   render: function() {
     var squares = this.props.row.map(function(block, i) {
-      return <CanvasSquare key={i} data={block} />;
+      return CanvasSquare({ key: i, data: block });
     });
 
-    return (
-      <div className="board-row">
-        { squares }
-      </div>
-    );
+    return div({ className: 'board-row' }, squares);
   }
 });
 
@@ -42,6 +35,13 @@ var Tetris = React.createClass({
     width: React.PropTypes.number
   },
 
+  getDefaultProps: function() {
+    return {
+      height: 20,
+      width: 10
+    };
+  },
+
   getInitialState: function() {
     return tetris.getInitialState(this.props.height, this.props.width);
   },
@@ -49,38 +49,49 @@ var Tetris = React.createClass({
   componentDidMount: function() {
     function step() {
       this.setState(tetris.step(this.state));
-      setTimeout(step.bind(this), 200);
+      setTimeout(step.bind(this), this.state.speed);
     }
 
     step.call(this);
-    this.bindKeyPresses();
+    this.refs.board.getDOMNode().focus();
   },
 
-  bindKeyPresses: function() {
-    function _do(action) {
-      this.setState(action(this.state));
-    }
+  _handleKey: function(event) {
+    var actionMap = {
+      'ArrowUp': tetris.rotate,
+      'ArrowDown': tetris.moveDown,
+      'ArrowLeft': tetris.moveLeft,
+      'ArrowRight': tetris.moveRight,
+      ' ': tetris.drop
+    };
 
-    mousetrap.bind('left',  _do.bind(this, tetris.moveLeft));
-    mousetrap.bind('right', _do.bind(this, tetris.moveRight));
-    mousetrap.bind('down',  _do.bind(this, tetris.moveDown));
-    mousetrap.bind('up',    _do.bind(this, tetris.rotate));
-    mousetrap.bind('space', _do.bind(this, tetris.drop));
+    if (event.key in actionMap) {
+      this.setState(actionMap[event.key](this.state))
+    }
+  },
+
+  _onFocus: function(event) {
+    this.setState({ running: true });
+  },
+
+  _onBlur: function(event) {
+    this.setState({ running: false });
   },
 
   render: function() {
-    var board = this.state.board;
-    var rows = board.map(function(row, i) {
-      return <CanvasRow key={i} row={row} />
+    var rows = this.state.board.map(function(row, i) {
+      return CanvasRow({ key: i, row: row });
     });
 
-    return (
-      <div ref="board" className="board" onKeyDown={this._handleKey}>
-        { rows }
-      </div>
-    );
+    return div({
+      ref: 'board',
+      className: 'board',
+      tabIndex: 0,
+      onKeyDown: this._handleKey,
+      onFocus: this._onFocus,
+      onBlur: this._onBlur
+    }, rows);
   }
 });
 
-
-React.renderComponent(<Tetris height={20} width={10} />, document.body);
+React.renderComponent(Tetris(), document.body);
