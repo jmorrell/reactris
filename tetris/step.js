@@ -19,6 +19,9 @@ function removeLines(state) {
     }
     modifier *= 2;
   }
+  if (modifier) {
+    state.speed = Math.max(state.speed - 20, 50);
+  }
   state.score += modifier;
 }
 
