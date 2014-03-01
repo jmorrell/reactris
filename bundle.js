@@ -86,7 +86,7 @@ var Tetris = React.createClass({displayName: 'Tetris',
 
 React.renderComponent(Tetris( {height:20, width:10} ), document.body);
 
-},{"./tetris":149,"mousetrap":3,"react/addons":4}],2:[function(require,module,exports){
+},{"./tetris":148,"mousetrap":3,"react/addons":4}],2:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -19183,15 +19183,183 @@ module.exports = warning;
 
 }).call(this,require("/Users/jmorrell/Desktop/reactris/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"))
 },{"./emptyFunction":112,"/Users/jmorrell/Desktop/reactris/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":2}],147:[function(require,module,exports){
+var moveFigure = require('./utils/move-figure.js');
 
 module.exports = function(state) {
-  console.log('drop');
+  while(moveFigure(state, 0, 1)) {
+    state.score += 10;
+  }
 
   return state;
 };
 
+},{"./utils/move-figure.js":159}],148:[function(require,module,exports){
+module.exports = {
+  getInitialState: require('./init-state.js'),
+  step: require('./step.js'),
+  rotate: require('./rotate.js'),
+  moveLeft: require('./move-left.js'),
+  moveRight: require('./move-right.js'),
+  moveDown: require('./move-down.js'),
+  drop: require('./drop.js')
+};
 
-},{}],148:[function(require,module,exports){
+
+
+},{"./drop.js":147,"./init-state.js":149,"./move-down.js":150,"./move-left.js":151,"./move-right.js":152,"./rotate.js":153,"./step.js":154}],149:[function(require,module,exports){
+var emptyLine = require('./utils/empty-line.js');
+var selectFigure = require('./utils/select-figure.js');
+var getNextFigure = require('./utils/get-next-figure.js');
+
+module.exports = function(height, width) {
+  var state = {
+    board: initBoard(height, width),
+    running: true,
+    score: 0,
+    nextFigure: getNextFigure(),
+    nextColor: 1,
+    x: 0,
+    y: 0,
+    figure: undefined
+  };
+
+  selectFigure(state);
+  return state;
+};
+
+function initBoard(height, width) {
+  var board = [];
+  for (var i = 0; i < height; i++) {
+    board[i] = emptyLine(width);
+  }
+  return board;
+}
+
+},{"./utils/empty-line.js":156,"./utils/get-next-figure.js":158,"./utils/select-figure.js":161}],150:[function(require,module,exports){
+var moveFigure = require('./utils/move-figure.js');
+
+module.exports = function(state) {
+  moveFigure(state, 0, 1);
+  return state;
+};
+
+
+},{"./utils/move-figure.js":159}],151:[function(require,module,exports){
+var moveFigure = require('./utils/move-figure.js');
+
+module.exports = function(state) {
+  moveFigure(state, -1, 0);
+  return state;
+};
+
+},{"./utils/move-figure.js":159}],152:[function(require,module,exports){
+var moveFigure = require('./utils/move-figure.js');
+
+module.exports = function(state) {
+  moveFigure(state, 1, 0);
+  return state;
+};
+
+},{"./utils/move-figure.js":159}],153:[function(require,module,exports){
+var addFigureMutation = require('./utils/add-figure-mutation.js');
+var removeFigureMutation = require('./utils/remove-figure-mutation.js');
+
+function rotateFigureMutation(state, dir) {
+  var result = [];
+  for (var i = 0; i < state.figure.length; i++) {
+    for (var j = 0; j < state.figure[i].length; j++) {
+      var y = dir === 1 ? j : state.figure.length-j-1;
+      var x = dir === 1 ? state.figure.length-1-i : i;
+      result[y] = result[y] || [];
+      result[y][x] = state.figure[i][j];
+    }
+  }
+  state.figure = result;
+}
+
+function rotateFigure(state, dir) {
+  removeFigureMutation(state);
+  rotateFigureMutation(state, dir);
+  if (addFigureMutation(state)) return true;
+  rotateFigureMutation(state, -dir);
+  addFigureMutation(state);
+}
+
+module.exports = function(state) {
+  rotateFigure(state, 1);
+  return state;
+};
+
+},{"./utils/add-figure-mutation.js":155,"./utils/remove-figure-mutation.js":160}],154:[function(require,module,exports){
+var emptyLine = require('./utils/empty-line.js');
+var selectFigure = require('./utils/select-figure.js');
+var moveFigure = require('./utils/move-figure.js');
+
+function hasEmpty(arr) {
+  return arr.some(function(val) {
+    return !val;
+  });
+}
+
+function removeLines(state) {
+  var modifier = 0;
+  for (var i = 0; i < state.board.length; i++) {
+    if (hasEmpty(state.board[i])) continue;
+    state.board.splice(i,1);
+    state.board.unshift(emptyLine(state.board[0].length));
+    if (!modifier) {
+      modifier += 150;
+    }
+    modifier *= 2;
+  }
+  state.score += modifier;
+}
+
+module.exports = function(state) {
+  if (state.running) {
+    if (moveFigure(state, 0,1)) return state;
+    removeLines(state);
+    if (state.y < 0) {
+      state.running = false;
+    }
+    selectFigure(state);
+  }
+
+  return state;
+}
+
+
+},{"./utils/empty-line.js":156,"./utils/move-figure.js":159,"./utils/select-figure.js":161}],155:[function(require,module,exports){
+
+function addFigureMutation(state, draw) {
+  var width = state.board[0].length;
+  for (var i = 0; i < state.figure.length; i++) {
+    for (var j = 0; j < state.figure[i].length; j++) {
+      var py = state.y + i;
+      var px = state.x + j;
+      if (state.figure[i][j] && (px < 0 || px >= width)) return false;
+      if (py < 0) continue;
+      if (!state.figure[i][j]) continue;
+      if (!state.board[py] || state.board[py][px] || state.board[py][px] === undefined) return false;
+      if (!draw) continue;
+      state.board[py][px] = state.figure[i][j] || state.board[py][px];
+    }
+  }
+  return draw ? true : addFigureMutation(state, true);
+}
+
+module.exports = addFigureMutation;
+
+},{}],156:[function(require,module,exports){
+module.exports = function emptyLine(width) {
+  var arr = [];
+  for (var i = 0; i < width; i++) {
+    arr[i] = 0;
+  }
+  return arr;
+}
+
+},{}],157:[function(require,module,exports){
 module.exports = [
 	[
 		[0,1,0],
@@ -19226,399 +19394,80 @@ module.exports = [
 
 
 
-},{}],149:[function(require,module,exports){
-module.exports = {
-  getInitialState: require('./init-state.js'),
-  step: require('./step.js'),
-  rotate: require('./rotate.js'),
-  moveLeft: require('./move-left.js'),
-  moveRight: require('./move-right.js'),
-  moveDown: require('./move-down.js'),
-  drop: require('./drop.js')
-};
-
-
-
-},{"./drop.js":147,"./init-state.js":150,"./move-down.js":151,"./move-left.js":152,"./move-right.js":153,"./rotate.js":154,"./step.js":155}],150:[function(require,module,exports){
+},{}],158:[function(require,module,exports){
 var FIGURES = require('./figures.js');
 
-module.exports = function(height, width) {
-  return {
-    board: initBoard(height, width),
-    score: 0,
-    nextFigure: (Math.random()*FIGURES.length)|0,
-    nextColor: 1,
-    x: 0,
-    y: 0,
-    figure: undefined
-  };
+module.exports = function() {
+  return (Math.random()*FIGURES.length)|0;
 };
 
-function initBoard(height, width) {
-  var board = [];
-  for (var i = 0; i < height; i++) {
-    board[i] = [];
-    for (var j = 0; j < width; j++) {
-      board[i][j] = 0;
-    }
+},{"./figures.js":157}],159:[function(require,module,exports){
+var addFigureMutation = require('./add-figure-mutation.js');
+var removeFigureMutation = require('./remove-figure-mutation.js');
+
+function moveFigure(state, dx, dy) {
+  removeFigureMutation(state);
+  state.x += dx;
+  state.y += dy;
+  // If the move was successful, exit and return true
+  if (addFigureMutation(state)) {
+    return true;
   }
-  return board;
+
+  // otherwise undo the mutation and return false
+  state.x -= dx;
+  state.y -= dy;
+  addFigureMutation(state);
+  return false;
 }
 
-},{"./figures.js":148}],151:[function(require,module,exports){
+module.exports = moveFigure;
 
-module.exports = function(state) {
-
-  var WIDTH = state.board[0].length;
-  var HEIGHT = state.board.length;
-
-  function addFigureMutation(draw) {
-    for (var i = 0; i < state.figure.length; i++) {
-      for (var j = 0; j < state.figure[i].length; j++) {
-        var py = state.y+i;
-        var px = state.x+j;
-        if (state.figure[i][j] && (px < 0 || px >= WIDTH)) return false;
-        if (py < 0) continue;
-        if (!state.figure[i][j]) continue;
-        if (!state.board[py] || state.board[py][px] || state.board[py][px] === undefined) return false;
-        if (!draw) continue;
-        state.board[py][px] = state.figure[i][j] || state.board[py][px];
-      }
-    }
-    return draw ? true : addFigureMutation(true);
-  }
-
-  function removeFigureMutation() {
-    for (var i = 0; i < state.figure.length; i++) {
-      for (var j = 0; j < state.figure[i].length; j++) {
-        var py = state.y+i;
-        var px = state.x+j;
-        if (px < 0) continue;
-        if (!state.figure[i][j] || !state.board[py] || state.board[py][px] === undefined) continue;
-        state.board[py][px] = 0;
-      }
+},{"./add-figure-mutation.js":155,"./remove-figure-mutation.js":160}],160:[function(require,module,exports){
+function removeFigureMutation(state) {
+  for (var i = 0; i < state.figure.length; i++) {
+    for (var j = 0; j < state.figure[i].length; j++) {
+      var py = state.y + i;
+      var px = state.x + j;
+      if (px < 0) continue;
+      if (!state.figure[i][j] || !state.board[py] || state.board[py][px] === undefined) continue;
+      state.board[py][px] = 0;
     }
   }
+}
 
-  function moveFigure(dx,dy) {
-    removeFigureMutation();
-    state.x += dx;
-    state.y += dy;
-    if (addFigureMutation()) return true;
-    state.x -= dx;
-    state.y -= dy;
-    addFigureMutation();
-  }
+module.exports = removeFigureMutation;
 
-  moveFigure(0, 1);
-
-  return state;
-};
-
-
-},{}],152:[function(require,module,exports){
-module.exports = function(state) {
-
-  var WIDTH = state.board[0].length;
-  var HEIGHT = state.board.length;
-
-  function addFigureMutation(draw) {
-    for (var i = 0; i < state.figure.length; i++) {
-      for (var j = 0; j < state.figure[i].length; j++) {
-        var py = state.y+i;
-        var px = state.x+j;
-        if (state.figure[i][j] && (px < 0 || px >= WIDTH)) return false;
-        if (py < 0) continue;
-        if (!state.figure[i][j]) continue;
-        if (!state.board[py] || state.board[py][px] || state.board[py][px] === undefined) return false;
-        if (!draw) continue;
-        state.board[py][px] = state.figure[i][j] || state.board[py][px];
-      }
-    }
-    return draw ? true : addFigureMutation(true);
-  }
-
-  function removeFigureMutation() {
-    for (var i = 0; i < state.figure.length; i++) {
-      for (var j = 0; j < state.figure[i].length; j++) {
-        var py = state.y+i;
-        var px = state.x+j;
-        if (px < 0) continue;
-        if (!state.figure[i][j] || !state.board[py] || state.board[py][px] === undefined) continue;
-        state.board[py][px] = 0;
-      }
-    }
-  }
-
-  function moveFigure(dx,dy) {
-    removeFigureMutation();
-    state.x += dx;
-    state.y += dy;
-    if (addFigureMutation()) return true;
-    state.x -= dx;
-    state.y -= dy;
-    addFigureMutation();
-  }
-
-  moveFigure(-1, 0);
-
-  return state;
-};
-
-
-},{}],153:[function(require,module,exports){
-module.exports = function(state) {
-
-  var WIDTH = state.board[0].length;
-  var HEIGHT = state.board.length;
-
-  function addFigureMutation(draw) {
-    for (var i = 0; i < state.figure.length; i++) {
-      for (var j = 0; j < state.figure[i].length; j++) {
-        var py = state.y+i;
-        var px = state.x+j;
-        if (state.figure[i][j] && (px < 0 || px >= WIDTH)) return false;
-        if (py < 0) continue;
-        if (!state.figure[i][j]) continue;
-        if (!state.board[py] || state.board[py][px] || state.board[py][px] === undefined) return false;
-        if (!draw) continue;
-        state.board[py][px] = state.figure[i][j] || state.board[py][px];
-      }
-    }
-    return draw ? true : addFigureMutation(true);
-  }
-
-  function removeFigureMutation() {
-    for (var i = 0; i < state.figure.length; i++) {
-      for (var j = 0; j < state.figure[i].length; j++) {
-        var py = state.y+i;
-        var px = state.x+j;
-        if (px < 0) continue;
-        if (!state.figure[i][j] || !state.board[py] || state.board[py][px] === undefined) continue;
-        state.board[py][px] = 0;
-      }
-    }
-  }
-
-  function moveFigure(dx,dy) {
-    removeFigureMutation();
-    state.x += dx;
-    state.y += dy;
-    if (addFigureMutation()) return true;
-    state.x -= dx;
-    state.y -= dy;
-    addFigureMutation();
-  }
-
-  moveFigure(1, 0);
-
-  return state;
-};
-
-
-},{}],154:[function(require,module,exports){
-
-module.exports = function(state) {
-
-  var WIDTH = state.board[0].length;
-  var HEIGHT = state.board.length;
-
-  function removeFigureMutation() {
-    for (var i = 0; i < state.figure.length; i++) {
-      for (var j = 0; j < state.figure[i].length; j++) {
-        var py = state.y+i;
-        var px = state.x+j;
-        if (px < 0) continue;
-        if (!state.figure[i][j] || !state.board[py] || state.board[py][px] === undefined) continue;
-        state.board[py][px] = 0;
-      }
-    }
-  }
-
-  function addFigureMutation(draw) {
-    for (var i = 0; i < state.figure.length; i++) {
-      for (var j = 0; j < state.figure[i].length; j++) {
-        var py = state.y+i;
-        var px = state.x+j;
-        if (state.figure[i][j] && (px < 0 || px >= WIDTH)) return false;
-        if (py < 0) continue;
-        if (!state.figure[i][j]) continue;
-        if (!state.board[py] || state.board[py][px] || state.board[py][px] === undefined) return false;
-        if (!draw) continue;
-        state.board[py][px] = state.figure[i][j] || state.board[py][px];
-      }
-    }
-    return draw ? true : addFigureMutation(true);
-  }
-
-  function rotateFigureMutation(dir) {
-    var result = [];
-    for (var i = 0; i < state.figure.length; i++) {
-      for (var j = 0; j < state.figure[i].length; j++) {
-        var y = dir === 1 ? j : state.figure.length-j-1;
-        var x = dir === 1 ? state.figure.length-1-i : i;
-        result[y] = result[y] || [];
-        result[y][x] = state.figure[i][j];
-      }
-    }
-    state.figure = result;
-  }
-
-  function rotateFigure(dir) {
-    removeFigureMutation();
-    rotateFigureMutation(dir);
-    if (addFigureMutation()) return true;
-    rotateFigureMutation(-dir);
-    addFigureMutation();
-  }
-
-  rotateFigure(1);
-  return state;
-};
-
-},{}],155:[function(require,module,exports){
+},{}],161:[function(require,module,exports){
 var FIGURES = require('./figures.js');
+var getNextFigure = require('./get-next-figure.js');
 
-module.exports = function(state) {
-
-  var WIDTH = state.board[0].length;
-  var HEIGHT = state.board.length;
-
-  function selectFigure() {
-    state.figure = FIGURES[state.nextFigure];
-    state.nextFigure = (Math.random()*FIGURES.length)|0;
-    for (var i = 0; i < state.figure.length; i++) {
-      for (var j = 0; j < state.figure.length; j++) {
-        state.figure[i][j] = state.figure[i][j] && state.nextColor;
-      }
-    }
-    state.nextColor = 1+((Math.random()*5)|0);
-    state.y = -state.figure.length;
-    state.x = ((WIDTH / 2) - (state.figure.length / 2)) | 0;
-
-    var btm = state.figure.length-1;
-
-    while (allEmpty(state.figure[btm])) {
-      state.y++;
-      btm--;
-    }
-  }
-
-  function rotateFigureMutation(dir) {
-    var result = [];
-    for (var i = 0; i < state.figure.length; i++) {
-      for (var j = 0; j < state.figure[i].length; j++) {
-        var y = dir === 1 ? j : state.figure.length-j-1;
-        var x = dir === 1 ? state.figure.length-1-i : i;
-        result[y] = result[y] || [];
-        result[y][x] = state.figure[i][j];
-      }
-    }
-    state.figure = result;
-  }
-
-  function addFigureMutation(draw) {
-    for (var i = 0; i < state.figure.length; i++) {
-      for (var j = 0; j < state.figure[i].length; j++) {
-        var py = state.y+i;
-        var px = state.x+j;
-        if (state.figure[i][j] && (px < 0 || px >= WIDTH)) return false;
-        if (py < 0) continue;
-        if (!state.figure[i][j]) continue;
-        if (!state.board[py] || state.board[py][px] || state.board[py][px] === undefined) return false;
-        if (!draw) continue;
-        state.board[py][px] = state.figure[i][j] || state.board[py][px];
-      }
-    }
-    return draw ? true : addFigureMutation(true);
-  }
-
-  function removeFigureMutation() {
-    for (var i = 0; i < state.figure.length; i++) {
-      for (var j = 0; j < state.figure[i].length; j++) {
-        var py = state.y+i;
-        var px = state.x+j;
-        if (px < 0) continue;
-        if (!state.figure[i][j] || !state.board[py] || state.board[py][px] === undefined) continue;
-        state.board[py][px] = 0;
-      }
-    }
-  }
-
-  function line() {
-    var arr = [];
-    for (var i = 0; i < WIDTH; i++) {
-      arr[i] = 0;
-    }
-    return arr;
-  }
-
-  function allEmpty(arr) {
-    return !arr.some(function(val) {
-      return val;
-    });
-  }
-
-  function hasEmpty(arr) {
-    return arr.some(function(val) {
-      return !val;
-    });
-  }
-
-  function moveFigure(dx,dy) {
-    removeFigureMutation();
-    state.x += dx;
-    state.y += dy;
-    if (addFigureMutation()) return true;
-    state.x -= dx;
-    state.y -= dy;
-    addFigureMutation();
-  }
-
-  function rotateFigure(dir) {
-    removeFigureMutation();
-    rotateFigureMutation(dir);
-    if (addFigureMutation()) return true;
-    rotateFigureMutation(-dir);
-    addFigureMutation();
-  }
-
-  function removeLines() {
-    var modifier = 0;
-    for (var i = 0; i < state.board.length; i++) {
-      if (hasEmpty(state.board[i])) continue;
-      state.board.splice(i,1);
-      state.board.unshift(line());
-      if (!modifier) {
-        modifier += 150;
-      }
-      modifier *= 2;
-    }
-    state.score += modifier;
-  }
-
-  function reset() {
-    for (var i = 0; i < HEIGHT; i++) {
-      for (var j = 0; j < WIDTH; j++) {
-        state.board[i][j] = 0;
-      }
-    }
-    state.score = 0;
-  }
-
-  if (!state.figure) {
-    selectFigure();
-  }
-
-  if (moveFigure(0,1)) return state;
-  removeLines();
-  if (state.y < 0) {
-    reset();
-  }
-  selectFigure();
-
-  return state;
+function allEmpty(arr) {
+  return !arr.some(function(val) {
+    return val;
+  });
 }
 
+function selectFigure(state) {
+  state.figure = FIGURES[state.nextFigure];
+  state.nextFigure = getNextFigure();
+  for (var i = 0; i < state.figure.length; i++) {
+    for (var j = 0; j < state.figure.length; j++) {
+      state.figure[i][j] = state.figure[i][j] && state.nextColor;
+    }
+  }
+  state.nextColor = 1+((Math.random()*5)|0);
+  state.y = -state.figure.length;
+  state.x = ((state.board[0].length / 2) - (state.figure.length / 2)) | 0;
 
-},{"./figures.js":148}]},{},[1])
+  var btm = state.figure.length-1;
+
+  while (allEmpty(state.figure[btm])) {
+    state.y++;
+    btm--;
+  }
+}
+
+module.exports = selectFigure;
+
+},{"./figures.js":157,"./get-next-figure.js":158}]},{},[1])
