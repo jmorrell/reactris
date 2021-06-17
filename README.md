@@ -6,6 +6,8 @@ Simplified React tetris demo rendered to the DOM
 
 [Play Demo](http://jmorrell.github.io/reactris/)
 
+This should be a conflicting change
+
 ### Controls
 
 | Key   | Action |
