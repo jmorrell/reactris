@@ -1,5 +1,5 @@
 
-reactris
+reactris 2 - electric boogaloo
 ========
 
 Simplified React tetris demo rendered to the DOM
